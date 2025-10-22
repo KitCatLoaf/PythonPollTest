@@ -145,7 +145,7 @@ if __name__ == "__main__":
     set_voted(poll_id)
 
     poll= getPoll(poll_id)
-    print("\nUpdated Voted:\n")
+    print("\nUpdated Votes:\n")
     displayVotes(poll)
 
     print("Exiting...")
