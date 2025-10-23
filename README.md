@@ -2,7 +2,8 @@
 
 Hello all! This is here mostly to have as part of my portfolio and to have fun with my friends.
 
-To use, install main.py and requirements.txt
+To use, install main.py, requirements.txt, and ensure you have python installed.
+If you're on windows add python to path when installing.
 
 Run 'pip install -r requirements.txt' after navigating to your install directory in terminal.
 
