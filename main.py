@@ -9,18 +9,44 @@ VOTE_RECORD_FILE = "vote_record.json"
 def load_vote_record():
     if not os.path.exists(VOTE_RECORD_FILE):
         return {}
-    with open(VOTE_RECORD_FILE, "r") as f:
+    with open(VOTE_RECORD_FILE, "r") as f: # r opens in read mode, f converts to python dict
         return json.load(f)
+    
 def save_vote_record(record):
-    with open(VOTE_RECORD_FILE, "w") as f:
-        json.dump(record, f)
+    with open(VOTE_RECORD_FILE, "w") as f: # w opens in write mode
+        json.dump(record, f) # converts the record to json and writes to file
+
 def has_voted(poll_id):
     record = load_vote_record()
     return record.get(f"poll_{poll_id}", False)
+
 def set_voted(poll_id):
     record = load_vote_record()
     record[f"poll_{poll_id}"] = True
     save_vote_record(record)
+
+def clear_vote_record(poll_id):
+    record = load_vote_record()
+    record.pop(f"poll_{poll_id}", None)
+    record.pop(f"poll_{poll_id}_title", None)
+    save_vote_record(record)
+
+        
+def saveTitle(poll_id, title):
+    record = load_vote_record()
+    if not title or title.strip() == "":
+        print("ERROR: Couldn't save title to record")
+        exit()
+    record[f"poll_{poll_id}_title"] = title
+    save_vote_record(record)
+
+def titleMatch(poll_id):
+    record = load_vote_record()
+    poll = getPoll(poll_id)
+    if not poll:
+        return False
+    return record.get(f"poll_{poll_id}_title") == poll["title"]
+
 
 
 
@@ -33,6 +59,15 @@ headers = {
     "Content-Type": "application/json",
     "Prefer": "return=representation"
 }
+
+def getAndSaveTitle(poll_id):
+    poll = getPoll(poll_id)
+    if poll and poll.get('title'):
+        saveTitle(poll_id, poll['title'])
+    else:
+        print("Couldn't fetch title from poll. Exiting...")
+        exit()
+
 
 def getPoll(poll_id=1):
     url = f"{supabaseUrl}/rest/v1/votes?id=eq.{poll_id}"
@@ -51,20 +86,11 @@ def getAllPolls():
     print("ERROR: Failed to fetch polls: ", response.text)
     return []
 
-def getVotes():
-    url = f"{supabaseUrl}/rest/v1/votes?id=eq.1"
-    response = requests.get(url, headers=headers)
-    if response.status_code == 200:
-        data = response.json()
-        return data[0] if data else None
-    print("ERROR: Failed to fetch votes: ", response.text)
-    return None
-
 def displayPoll(poll):
     print(f"Poll: {poll['title']}\nDesc: {poll['description']}")
     displayVotes(poll)
 
-def vote(choice, poll_id=1):
+def vote(choice, poll_id):
     if choice not in ["yes", "no"]:
         print("Invalid Choice")
         return
@@ -72,7 +98,7 @@ def vote(choice, poll_id=1):
     column = "yes_votes" if choice == "yes" else "no_votes"
     poll = getPoll(poll_id)
     if not poll:
-        print("Not poll found.")
+        print("ERROR: No poll found.")
         return
 
     new_count = poll[column] + 1
@@ -104,6 +130,7 @@ if __name__ == "__main__":
     print("Please do not attempt to edit your save data to vote multiple times.")
     print(f"Have fun!! Running in {cooldown} second(s)..\n")
     time.sleep(cooldown)
+
     polls = getAllPolls()
 
     if not polls:
@@ -121,18 +148,32 @@ if __name__ == "__main__":
         exit()
     poll_id = int(poll_id)
 
+    if not has_voted(poll_id):
+        getAndSaveTitle(poll_id)
+
+    if not titleMatch(poll_id):
+        clear_vote_record(poll_id)
+
     if has_voted(poll_id):
         print("You have already voted in this poll. See updated results?\n")
         answer = input("(Y/N): ").strip().lower()
-        if answer != 'y':
+        if answer not in ('y', "yes"):
+            if answer == "emergencycleardata":
+                if os.path.exists(VOTE_RECORD_FILE):
+                 os.remove(VOTE_RECORD_FILE)
+                 print("Vote record cleared.")
+            print("Exiting...")
             exit()
-        else:
+        elif answer in ('y', "yes"):
             poll = getPoll(poll_id)
             if poll:
                 displayPoll(poll)
             else:
                 print("No poll found. Exiting...")
-            exit()
+        else:
+            print("Invalid response. Exiting...")
+        exit()
+
     poll = getPoll(poll_id)
     if not poll:
         print("No poll found. Exiting...")
@@ -141,6 +182,7 @@ if __name__ == "__main__":
     displayPoll(poll)
 
     user_choice = input("Enter your vote (yes/no):\nInput: ").strip().lower()
+    getAndSaveTitle(poll_id)
     vote(user_choice, poll_id)
     set_voted(poll_id)
 
