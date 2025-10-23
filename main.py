@@ -91,11 +91,11 @@ def displayPoll(poll):
     displayVotes(poll)
 
 def vote(choice, poll_id):
-    if choice not in ["yes", "no"]:
+    if choice not in ["yes", "no", "y", "n"]:
         print("Invalid Choice")
         return
     
-    column = "yes_votes" if choice == "yes" else "no_votes"
+    column = "yes_votes" if choice in ("y", "yes") else "no_votes"
     poll = getPoll(poll_id)
     if not poll:
         print("ERROR: No poll found.")
@@ -163,15 +163,12 @@ if __name__ == "__main__":
                  os.remove(VOTE_RECORD_FILE)
                  print("Vote record cleared.")
             print("Exiting...")
-            exit()
         elif answer in ('y', "yes"):
             poll = getPoll(poll_id)
             if poll:
                 displayPoll(poll)
             else:
                 print("No poll found. Exiting...")
-        else:
-            print("Invalid response. Exiting...")
         exit()
 
     poll = getPoll(poll_id)
@@ -184,6 +181,9 @@ if __name__ == "__main__":
     user_choice = input("Enter your vote (yes/no):\nInput: ").strip().lower()
     getAndSaveTitle(poll_id)
     vote(user_choice, poll_id)
+    if not user_choice in ["yes", "no", "y", "n"]:
+        print("Exiting...")
+        exit()
     set_voted(poll_id)
 
     poll= getPoll(poll_id)
